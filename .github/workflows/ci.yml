@@ -41,7 +41,7 @@ jobs:
       - name: Run pytest
         run: |
           . .venv/bin/activate
-          python -m pytest tests -ra
+          python -m pytest test -ra
 
       - uses: actions/checkout@v5
 
