@@ -1,0 +1,36 @@
+[build-system]
+requires = ["scikit-build-core>=0.9", "setuptools_scm>=8", "numpy>=2.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "mlx_create_c"
+version = "0.0.1"
+description = "port of the matlab mlx create library in c"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{ name = "Georgios M. Koutentakis" }]
+dependencies = ["numpy>=2.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.scikit-build]
+# Put your Python package under src/
+wheel.packages = ["src/mlx_create_c"]
+logging.level = "DEBUG"
+sdist.exclude = [".venv", "build", "dist",
+  "**/__pycache__/**", "**/*.py[cod]",
+  "**/*~",            # editor backups
+  "**/#*#",           # Emacs autosave
+  "**/.#*",           # Emacs lock files
+  "**/.DS_Store",
+  ".idea/**",
+  ".vscode/**"        # vscode junk
+  ]
+
+# You can forward CMake args at pip-install time; defaults here are optional:
+cmake.args = ["-DPython3_FIND_VIRTUALENV=ONLY"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+addopts = ["-ra", "--import-mode=importlib"]

@@ -1,0 +1,16 @@
+.venv/
+*~
+#*#
+.#*
+__pycache__/
+build/
+dist/
+.DS_Store
+
+# Emacs backups
+*~
+\#*\#
+.#*
+
+# undo-tree persistent history
+*.~undo-tree~
