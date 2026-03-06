@@ -32,7 +32,7 @@ class ErrorHandler:
                 f'Expected: {target_number_state}')
 
     def return_error_string(self):
-        return f'{self.err_num} errors detected when testing mapmat with:\n'
+        return f'{self.err_num} errors detected when testing mapmat with:\n' \
             + f'Np:{Np} and m:{m}\n' \
             + "\n".join((self._construct_single_error_msg(i)
                          for i in range(self.err_num)))
