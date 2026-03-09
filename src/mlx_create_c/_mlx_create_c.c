@@ -17,9 +17,13 @@ PyObject* create_bos_ns(PyObject* self, PyObject* args)
   }
 
   // Outputs
-  npy_long Nstates = nchoosek(Np + m -1, m-1);
+  const ns_basis_parameters bas_par = {
+    .Nstates = nchoosek(Np + m -1, m-1),
+    .Np = Np,
+    .m = m
+  };
 
-  npy_intp dims[2] = { (npy_intp) Nstates, (npy_intp) m };
+  npy_intp dims[2] = { (npy_intp) bas_par.Nstates, (npy_intp) bas_par.m };
   PyObject* out = PyArray_SimpleNew(2, dims, NPY_LONG);
   if (!out) return NULL;
 
@@ -28,7 +32,7 @@ PyObject* create_bos_ns(PyObject* self, PyObject* args)
 
   // Call the C function
   Py_BEGIN_ALLOW_THREADS;
-  create_bos_ns_core(v, Np, m, Nstates);
+  create_bos_ns_core(v, bas_par);
   Py_END_ALLOW_THREADS;
 
   return out;
@@ -58,11 +62,12 @@ PyObject* create_mapmat_bos(PyObject* self, PyObject* args)
   // calculate parameters from input array sizes
   npy_long* Ns1 = (npy_long*) PyArray_DATA(input_array);
 
-  npy_long Nstates1 = number_of_rows;
-  npy_long m = number_of_columns;
-  npy_long Np = Ns1[0] + 1;
-
-  npy_intp dims[2] = { (npy_intp) Nstates1, (npy_intp) m };
+  const ns_basis_parameters bas_par = {
+    .Nstates = number_of_rows,
+    .Np = Ns1[0],
+    .m = number_of_columns
+  };
+  npy_intp dims[2] = { (npy_intp) bas_par.Nstates, (npy_intp) bas_par.m };
   PyObject* out = PyArray_SimpleNew(2, dims, NPY_LONG);
   if (!out) return NULL;
 
@@ -71,7 +76,7 @@ PyObject* create_mapmat_bos(PyObject* self, PyObject* args)
 
   // Call the C function
   Py_BEGIN_ALLOW_THREADS;
-  create_mapmat_bos_core(map, Ns1, Nstates1, Np, m);
+  create_mapmat_bos_core(map, Ns1, bas_par);
   Py_END_ALLOW_THREADS;
 
   Py_DECREF(input_array);

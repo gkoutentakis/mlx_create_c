@@ -22,31 +22,31 @@ nchoosek(npy_long n, npy_long k)
 }
 
 void
-create_bos_ns_core(npy_long *Ns, npy_long Np, npy_long m, npy_long Nstates)
+create_bos_ns_core(npy_long *Ns, ns_basis_parameters basis_par)
 {
   npy_long i, j, stack, set;
 
-  Ns[0] = Np;
-  for (i=1L; i<m; i++)
+  Ns[0] = basis_par.Np;
+  for (i=1L; i<basis_par.m; i++)
     Ns[i] = 0L;
 
-  for (i=1L; i<Nstates; i++){
-    stack = Ns[i*m - 1];
+  for (i=1L; i<basis_par.Nstates; i++){
+    stack = Ns[i*basis_par.m - 1];
 
-    for (j=0L; j<m-1L; j++){
-      Ns[i*m+j] = Ns[(i-1)*m + j];
-      if (Ns[(i-1)*m + j] > 0L) set = j;
+    for (j=0L; j<basis_par.m-1L; j++){
+      Ns[i*basis_par.m+j] = Ns[(i-1)*basis_par.m + j];
+      if (Ns[(i-1)*basis_par.m + j] > 0L) set = j;
     }
-    Ns[(i+1)*m -1] = 0;
+    Ns[(i+1)*basis_par.m -1] = 0;
 
-    Ns[i*m+set]--;
-    Ns[i*m+set+1] += stack + 1L;
+    Ns[i*basis_par.m+set]--;
+    Ns[i*basis_par.m+set+1] += stack + 1L;
   }
   
 }
 
 void
-create_mapmat_bos_core(npy_long* map, npy_long* Ns1, npy_long Nstates1, npy_long Np, npy_long m)
+create_mapmat_bos_core(npy_long* map, npy_long* Ns1, ns_basis_parameters basis_par)
 {
   npy_long state_index, orbital_new, orbital_index, particle_count, n, k;
   npy_long *current_map_element, *current_number_state;
@@ -54,23 +54,30 @@ create_mapmat_bos_core(npy_long* map, npy_long* Ns1, npy_long Nstates1, npy_long
   current_map_element = map;
   current_number_state = Ns1;
 
-  for (state_index=0L; state_index < Nstates1;
-       state_index++, current_number_state += m){
-    for (orbital_new=0L; orbital_new<m;
+  for (state_index=0L; state_index < basis_par.Nstates;
+       state_index++, current_number_state += basis_par.m){
+    for (orbital_new=0L; orbital_new<basis_par.m;
 	 orbital_new++, current_map_element++){
 
       *current_map_element = 0L;
       particle_count = 0L;
 
-      for (orbital_index=0L; orbital_index<m-1; orbital_index++){
+      for (orbital_index=0L; orbital_index<basis_par.m-1; orbital_index++){
 	particle_count += current_number_state[orbital_index];
 	if (orbital_index == orbital_new) particle_count++;
 
-	n = Np + m - orbital_index -2 - particle_count;
-	k =  m - orbital_index - 1;
+	n = basis_par.Np + basis_par.m - orbital_index -1 - particle_count;
+	k =  basis_par.m - orbital_index - 1;
 	*current_map_element += nchoosek(n, k);
       }
 
     }
   }
 }
+
+/* void */
+/* configuration_from_state_index(npy_long* configuration, npy_long index, */
+/* 			       ns_basis_parameters basis_par)     */
+/* { */
+  
+/* } */

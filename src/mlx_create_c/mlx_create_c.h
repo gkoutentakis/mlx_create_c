@@ -2,8 +2,14 @@
 #define MLX_CREATE_C
 #include <numpy/arrayobject.h>
 
+typedef struct {
+  npy_long Nstates;
+  npy_long Np;
+  npy_long m;
+} ns_basis_parameters;
+
 npy_long nchoosek(npy_long, npy_long);
-void create_bos_ns_core(npy_long*, npy_long, npy_long, npy_long);
-void create_mapmat_bos_core(npy_long*, npy_long*, npy_long, npy_long, npy_long);
+void create_bos_ns_core(npy_long*, ns_basis_parameters);
+void create_mapmat_bos_core(npy_long*, npy_long*, ns_basis_parameters);
 
 #endif
