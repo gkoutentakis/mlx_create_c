@@ -106,7 +106,7 @@ static PyObject*
 configuration_from_state_index_array(npy_long* indices,
 				     int ndims_input,
 				     npy_intp* dims_input,
-				     npy_intp* number_of_elements_input,
+				     npy_intp number_of_elements_input,
 				     ns_basis_parameters bas_par)
 {
     npy_intp *out_dims = PyMem_Malloc((size_t)(ndims_input + 1) * sizeof(npy_intp));
