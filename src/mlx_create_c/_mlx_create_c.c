@@ -1,7 +1,10 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <Python.h>
 #include <math.h>
+#include <numpy/ndarraytypes.h>
+#include <numpy/ufuncobject.h>
 #include "mlx_create_c.h"
+#include <stdio.h>
 
 static
 PyObject* create_bos_ns(PyObject* self, PyObject* args)
@@ -157,7 +160,7 @@ configuration_from_state_index(PyObject* self, PyObject* args)
   if (PyArray_IsScalar(py_object, Integer) || PyLong_Check(py_object)) {
     npy_long index = (npy_long) PyLong_AsLong(py_object);
     if (index < 0) {
-      PyErr_SetString(PyExc_RuntimeError, "Indices should be non-negative");
+      PyErr_SetString(PyExc_ValueError, "Indices should be non-negative");
       return NULL;
     }
 
@@ -193,7 +196,7 @@ configuration_from_state_index(PyObject* self, PyObject* args)
     Py_DECREF(indices_np);
 
     if (index < 0) {
-      PyErr_SetString(PyExc_RuntimeError, "Invalid index in 0-D array");
+      PyErr_SetString(PyExc_ValueError, "Invalid index in 0-D array");
       return NULL;
     }
 
@@ -210,6 +213,92 @@ configuration_from_state_index(PyObject* self, PyObject* args)
   Py_DECREF(indices_np);
   return out;
 }
+
+/* several inefficiencies here maybe we need to write a dedicated core for this */
+void
+creation_operator_ufunc(char **args,
+                        const npy_intp *dimensions,
+                        const npy_intp *steps,
+                        void *data)
+{
+  npy_long ns_ind_in, orbital_ind_in, ns_ind_out, Np_in, m_in;
+  double weight_out;
+  ns_basis_parameters bas_par;
+
+  npy_long configuration_data[128];
+
+  npy_intp n = dimensions[0];
+
+  char *pointer_ns_ind_in   = args[0];
+  char *pointer_orbital_ind = args[1];
+  char *pointer_Np_in       = args[2];
+  char *pointer_m_in        = args[3];
+  char *pointer_ns_ind_out  = args[4];
+  char *pointer_weight_out  = args[5];
+
+  npy_intp step_ns_ind_in   = steps[0];
+  npy_intp step_orbital_ind = steps[1];
+  npy_intp step_Np_in       = steps[2];
+  npy_intp step_m_in        = steps[3];
+  npy_intp step_ns_ind_out  = steps[4];
+  npy_intp step_weight_out  = steps[5];
+
+  for (npy_intp i = 0; i < n; ++i) {
+    ns_ind_in      = *(npy_long *) pointer_ns_ind_in;
+    orbital_ind_in = *(npy_long *) pointer_orbital_ind;
+    Np_in          = *(npy_long *) pointer_Np_in;
+    m_in           = *(npy_long *) pointer_m_in;
+
+    bas_par.Nstates = nchoosek(Np_in + m_in-1, m_in-1);
+    bas_par.Np = Np_in;
+    bas_par.m = m_in;
+
+    if (Np_in < 0){
+        fprintf(stderr, "number of particles should be positive");
+	return;
+    }
+    if (m_in < 0){
+        fprintf(stderr, "number of orbitals should be positive");
+	return;
+    }
+    if (m_in >= 128){
+        fprintf(stderr, "this function supports up to 128 orbitals");
+	return;
+    }
+    if (ns_ind_in<0 || ns_ind_in>=bas_par.Nstates){
+        fprintf(stderr, "number state index out of bounds");
+	return;
+    }
+    if (orbital_ind_in<0 || orbital_ind_in >= bas_par.m){
+        fprintf(stderr, "orbital index out of bounds");
+	return;
+    }
+    // core
+    /* configuration_data = (npy_long*) malloc((unsigned long) m_in * sizeof(npy_long)); */
+    /* if (!configuration_data){ */
+    /*   fprintf(stderr, "Out of memory\n"); */
+    /*   return; */
+    /* } */
+    configuration_from_state_index_core(configuration_data, ns_ind_in, bas_par);
+    ns_ind_out = get_index_from_configuration(configuration_data, orbital_ind_in, bas_par);
+    weight_out = sqrt((double) (configuration_data[orbital_ind_in] + 1));
+    /* free(configuration_data); */
+
+    *(npy_long *)pointer_ns_ind_out = ns_ind_out;
+    *(double *)pointer_weight_out   = weight_out;
+
+    pointer_ns_ind_in   += step_ns_ind_in;
+    pointer_orbital_ind += step_orbital_ind;
+    pointer_Np_in       += step_Np_in;
+    pointer_m_in        += step_m_in;
+    pointer_ns_ind_out  += step_ns_ind_out;
+    pointer_weight_out  += step_weight_out;
+  }
+}
+
+static PyUFuncGenericFunction funcs[1] = { &creation_operator_ufunc };
+static char types[6] = { NPY_LONG, NPY_LONG, NPY_LONG, NPY_LONG, NPY_LONG, NPY_DOUBLE };
+
 
 static PyMethodDef Methods[] = {
     {"create_bos_ns", create_bos_ns, METH_VARARGS,
@@ -229,6 +318,39 @@ static struct PyModuleDef moduledef = {
 };
 
 PyMODINIT_FUNC PyInit__mlx_create_c(void) {
-    import_array();
-    return PyModule_Create(&moduledef);
+  PyObject *ufunc, *m, *d;
+  import_array();
+  import_umath();
+
+  m = PyModule_Create(&moduledef);
+  if (m == NULL)
+    return NULL;
+
+  ufunc = PyUFunc_FromFuncAndData(
+      funcs,
+      NULL,
+      types,
+      1,   /* ntypes */
+      4,   /* nin */
+      2,   /* nout */
+      PyUFunc_None,
+      "creation_operator",
+      "returns the index and weight of a creation operator",
+      0
+  );
+
+  if (ufunc == NULL) {
+      Py_DECREF(m);
+      return NULL;
+  }
+
+ d = PyModule_GetDict(m);
+ if (PyDict_SetItemString(d, "creation_operator", ufunc) < 0) {
+     Py_DECREF(ufunc);
+     Py_DECREF(m);
+     return NULL;
+ }
+ Py_DECREF(ufunc);
+
+ return m;
 }
