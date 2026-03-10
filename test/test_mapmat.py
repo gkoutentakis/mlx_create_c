@@ -23,7 +23,7 @@ class ErrorHandler:
         target_number_state[orbital_index] += 1
         state_mapmat_points_at = self.Ns[self.mapmat[state_index, orbital_index], :]
 
-        return (f'Error {num}:\n'
+        return (f'Error {num+1}:\n'
                 f'The {self.Np-1} particle number state:\n'
                 f'Ind:{state_index} Ns1:{Ns1},\n'
                 f'was mapped to the wrong {self.Np} number state when attempting to\n'
@@ -33,7 +33,7 @@ class ErrorHandler:
 
     def return_error_string(self):
         return f'{self.err_num} errors detected when testing mapmat with:\n' \
-            + f'Np:{Np} and m:{m}\n' \
+            + f'Np:{Np} and m:{m}\n\n' \
             + "\n".join((self._construct_single_error_msg(i)
                          for i in range(self.err_num)))
     
@@ -48,4 +48,4 @@ def test_mapmat(Np: int, m: int):
 
     if not np.array_equal(expected, actual):
         err = ErrorHandler(Np, m, Ns1, Ns, mapmat, actual, expected)
-        pytest.fail(err.return_error_string)
+        pytest.fail(err.return_error_string())

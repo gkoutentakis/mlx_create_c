@@ -75,9 +75,56 @@ create_mapmat_bos_core(npy_long* map, npy_long* Ns1, ns_basis_parameters basis_p
   }
 }
 
-/* void */
-/* configuration_from_state_index(npy_long* configuration, npy_long index, */
-/* 			       ns_basis_parameters basis_par)     */
-/* { */
-  
-/* } */
+void
+configuration_from_state_index_core(npy_long *configuration,
+                                    npy_long index,
+                                    ns_basis_parameters basis_par)
+{
+  npy_long i, n, k, block_max_index;
+
+  npy_long Nremaining=basis_par.Np;
+  npy_long *occupation_current = configuration;
+
+  for (i = 0, k = basis_par.m - 2; i < basis_par.m - 1;
+       i++, occupation_current++, k--) {
+    for (*occupation_current = Nremaining,
+	   n=k,
+	   block_max_index=1;;
+	 (*occupation_current)--,
+	   n++,
+	   block_max_index = (block_max_index * n)/(n-k)) {
+
+      if (index > block_max_index) {
+        index -= block_max_index;
+	continue;
+      }
+
+      if (index < block_max_index) {
+        Nremaining -= *occupation_current;
+        break;
+      } 
+
+      /* If equal we found the state:
+       It is the first state of the next block, having the following
+       properties: */
+
+      /* 1. the occupation of the current orbital is one less, */
+      (*occupation_current)--;
+
+      /* 2. the remaining particles (with the ones of the current orbital
+         subtracted of course) are on the next orbital to the current, */
+      occupation_current[1] = Nremaining - *occupation_current;
+
+      /* 3. the rest of the orbitals have zero particles. */
+      for (npy_long j = 2; j < basis_par.m - i; j++)
+        occupation_current[j] = 0;
+
+      /* we are done here */
+      return;
+    }
+
+  }
+
+  /* if some particles remain put them on the last orbital */
+  *occupation_current = Nremaining;
+}
