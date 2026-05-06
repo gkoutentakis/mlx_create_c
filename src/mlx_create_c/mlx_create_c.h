@@ -13,5 +13,5 @@ void create_bos_ns_core(npy_long*, ns_basis_parameters);
 void create_mapmat_bos_core(npy_long*, npy_long*, ns_basis_parameters);
 void configuration_from_state_index_core(npy_long*, npy_long, ns_basis_parameters);
 npy_long get_index_from_configuration(npy_long*, npy_long, ns_basis_parameters);
-
+void get_indices_from_configurations(npy_long*, npy_long*, npy_long, ns_basis_parameters);
 #endif

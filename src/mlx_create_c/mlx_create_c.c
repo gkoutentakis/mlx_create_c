@@ -85,6 +85,41 @@ get_index_from_configuration(npy_long* configuration,
   return output;
 }
 
+/* Index calculation for bosonic number states in reverse lexicographic
+   order according to:
+   A. I. Streltsov, et. al, Phys. Rev. A 81, 022124 (2010)
+   DOI: https://doi.org/10.1103/PhysRevA.81.022124
+   see Eq. (20). The code is adapted for zero based indexing. */
+/* VALIDITY: This routine uses a floating point approximation via nchoosek.
+ so it has the same regime of validity (see related comment in nchoosek). */
+void
+get_indices_from_configurations(npy_long* indices,
+				npy_long* configurations,
+			        npy_long configuration_number,
+			        ns_basis_parameters basis_par)
+{
+  npy_long *index, *configuration;
+  npy_long current_conf, orbital_index; 
+  npy_long particle_count, n, k;
+
+  for (current_conf=0, index=indices, configuration=configurations;
+       current_conf<configuration_number;
+       current_conf++, index++, configuration += basis_par.m){
+    *index = 0L;
+    particle_count=0L;
+
+    for (orbital_index=0L; orbital_index<basis_par.m-1; orbital_index++){
+	particle_count += configuration[orbital_index];
+
+	n = basis_par.Np + basis_par.m - orbital_index -2 - particle_count;
+	k =  basis_par.m - orbital_index - 1;
+	*index += nchoosek(n, k);
+    }
+    
+  }
+
+}
+
 /* The mapping matrix encoding the action of creation operator the N particle
    number state with index k under the action of the creation operator for the
    orbital j maps to the state with index map[k*basis_par.m + j]. */

@@ -87,6 +87,62 @@ PyObject* create_mapmat_bos(PyObject* self, PyObject* args)
   return out;
 }
 
+static
+PyObject* inv_occ_mat(PyObject* self, PyObject* args)
+{
+  PyObject *input_object = NULL;
+  PyArrayObject *input_array = NULL;
+  npy_intp number_of_rows, number_of_columns;
+
+  npy_long Np, m;
+
+  // parse object
+  if (!PyArg_ParseTuple(args, "O", &input_object))
+      return NULL;
+
+  // parse array from object
+  input_array = (PyArrayObject *) PyArray_FROMANY(
+      input_object, NPY_LONG, 2, 2, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_ENSUREARRAY);
+  if (input_array == NULL)
+    return NULL;
+
+  // find metadata of the array
+  number_of_rows = PyArray_DIM(input_array, 0);
+  number_of_columns = PyArray_DIM(input_array, 1);
+
+  
+  // calculate parameters from input array sizes
+  npy_long* configurations = (npy_long*) PyArray_DATA(input_array);
+
+  // Calculate parameters from the first configuration
+  m = number_of_columns;
+  Np = 0;
+  for (int i=0; i<m; i++)
+    Np += configurations[i];
+
+  const ns_basis_parameters bas_par = {
+    .Nstates = 0, //Not needed
+    .Np = Np,
+    .m = m
+  };
+
+  npy_intp dims[1] = { (npy_intp) number_of_rows };
+  PyObject* out = PyArray_SimpleNew(1, dims, NPY_LONG);
+  if (!out) return NULL;
+
+  //type cast to C array
+  npy_long* indices = (npy_long*) PyArray_DATA((PyArrayObject*)out);
+
+  // Call the C function
+  Py_BEGIN_ALLOW_THREADS;
+  get_indices_from_configurations(indices, configurations, number_of_rows, bas_par);
+  Py_END_ALLOW_THREADS;
+
+  Py_DECREF(input_array);
+
+  return out;
+}
+
 /* for testing purposes */
 static PyObject*
 configuration_from_state_index_scalar(npy_long index, ns_basis_parameters bas_par)
@@ -310,6 +366,9 @@ static PyMethodDef Methods[] = {
     {"configuration_from_state_index", configuration_from_state_index, METH_VARARGS,
      "Get the configuration of a number state from its index in lexicographic order"
      "Args: index(long), Np(long), m(long). Returns np.ndarray long."},
+    {"inv_occ_mat", inv_occ_mat, METH_VARARGS,
+     "Get the indices of a state in lexicographic order from its configuration"
+     "Args: configurations(long). Returns np.ndarray long."},
     {NULL, NULL, 0, NULL}
 };
 
