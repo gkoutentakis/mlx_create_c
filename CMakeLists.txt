@@ -13,6 +13,14 @@ execute_process(
 )
 message(STATUS "Python EXT_SUFFIX: ${PY_EXT_SUFFIX}")
 
+execute_process(
+  COMMAND ${Python3_EXECUTABLE} -c
+          "import numpy, pathlib; print((pathlib.Path(numpy.get_include()).parent / 'lib').resolve())"
+  OUTPUT_VARIABLE NUMPY_LIB_DIR
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+
 # --- Reusable C library with your logic ---
 add_library(mlx_create_c_obj OBJECT src/mlx_create_c/mlx_create_c.c)
 target_include_directories(mlx_create_c_obj PUBLIC src/mlx_create_c)
@@ -34,8 +42,11 @@ set_target_properties(_mlx_create_c PROPERTIES
 
 target_include_directories(_mlx_create_c PRIVATE ${Python3_INCLUDE_DIRS})
 target_include_directories(_mlx_create_c PRIVATE ${Python3_NumPy_INCLUDE_DIRS})
+target_link_directories(_mlx_create_c PRIVATE "${NUMPY_LIB_DIR}")
+
 target_link_libraries(_mlx_create_c PRIVATE Python3::Module)
 target_link_libraries(_mlx_create_c PRIVATE Python3::NumPy)
+target_link_libraries(_mlx_create_c PRIVATE npymath)
 target_link_libraries(_mlx_create_c PRIVATE mlx_create_c)
 
 install(TARGETS _mlx_create_c
